@@ -124,7 +124,7 @@ void EVOYAGER_VCU_2R1HW_step(void)
   boolean_T guard1;
 
   /* example CAN input */
-  rtB.CANinput = dcan2MessageboxRead(rtP.CAN2RXBlock2_MessageBoxNum,
+  rtB.CANinput1 = dcan2MessageboxRead(rtP.CAN2RXBlock2_MessageBoxNum,
     rtP.CAN2RXBlock2_canid, rtP.CAN2RxMessagebox_rxMask, rtP.CAN2RXBlock2_dlc);
 
 /*  check timestamp and unpack received bytes */  
