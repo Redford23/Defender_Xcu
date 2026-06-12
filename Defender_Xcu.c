@@ -503,8 +503,9 @@ void EVOYAGER_VCU_2R1HW_initialize(void)
 	* put code here that needs to be run on startup e.g key is on
   */
   EVOYAGER_VCU_2R1HW_InitializeDataMapInfo();
-
   {
+	  /* clear/set initial values of can data and timeouts */
+	  
 /*@red  user code here */
 
 
