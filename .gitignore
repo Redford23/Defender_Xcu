@@ -1,0 +1,52 @@
+# Eclipse Metadata
+.metadata
+
+# CCS browser browser cache
+.jxbrowser-data
+.jxbrowser.userdata
+
+# CCS build output
+EVP_XCU_TEMPLATE_2Rx/TMS570 with FPU FOR BOOTLOADER/
+
+# Temporary location of generated code
+*_ert_rtw
+
+# Windows default autosave extension
+*.asv
+
+# OSX / *nix default autosave extension
+*.m~
+
+# Compiled MEX binaries (all platforms)
+*.mex*
+
+# Packaged app and toolbox files
+*.mlappinstall
+*.mltbx
+
+# Generated helpsearch folders
+helpsearch*/
+
+# Simulink code generation folders
+slprj/
+sccprj/
+
+# Matlab code generation folders
+codegen/
+
+# Simulink autosave extension
+*.autosave
+
+# Simulink cache files
+*.slxc
+
+# Octave session info
+octave-workspace
+*.mk
+*.d
+extraArgs.txt
+/resources
+/resources/project
+ti_arm_toolchain_evp/toolchain_paths.mat
+
+
