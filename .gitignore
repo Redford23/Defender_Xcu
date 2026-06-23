@@ -6,7 +6,8 @@
 .jxbrowser.userdata
 
 # CCS build output
-EVP_XCU_TEMPLATE_2Rx/TMS570 with FPU FOR BOOTLOADER/
+EVP_XCU_TEMPLATE_2Rx/EVP_XCU_RELEASE/
+
 
 # Temporary location of generated code
 *_ert_rtw
@@ -48,6 +49,5 @@ extraArgs.txt
 /resources
 /resources/project
 ti_arm_toolchain_evp/toolchain_paths.mat
-/EVP_XCU_TEMPLATE_2Rx/EVP_XCU_RELEASE
 
 

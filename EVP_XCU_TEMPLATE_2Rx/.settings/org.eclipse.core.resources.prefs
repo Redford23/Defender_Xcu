@@ -24,6 +24,7 @@ encoding//EVP_XCU_RELEASE/TMS570\ with\ FPU\ FOR\ BOOTLOADER/xcp/subdir_vars.mk=
 encoding//EVP_XCU_RELEASE/TMS570\ with\ FPU/subdir_rules.mk=UTF-8
 encoding//EVP_XCU_RELEASE/TMS570\ with\ FPU/subdir_vars.mk=UTF-8
 encoding//EVP_XCU_RELEASE/makefile=UTF-8
+encoding//EVP_XCU_RELEASE/objects.mk=UTF-8
 encoding//EVP_XCU_RELEASE/simulink_model_code/subdir_rules.mk=UTF-8
 encoding//EVP_XCU_RELEASE/simulink_model_code/subdir_vars.mk=UTF-8
 encoding//EVP_XCU_RELEASE/sources.mk=UTF-8
