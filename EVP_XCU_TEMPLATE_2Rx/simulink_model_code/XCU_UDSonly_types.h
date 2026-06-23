@@ -44,7 +44,7 @@ typedef struct {
 typedef struct P_ P;
 
 /* Forward declaration for rtModel */
-typedef struct tag_RTM RT_MODEL;
+//typedef struct tag_RTM RT_MODEL;
 
 #endif                                 /* RTW_HEADER_XCU_UDSonly_types_h_ */
 

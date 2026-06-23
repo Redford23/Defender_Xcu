@@ -22,7 +22,7 @@
 
 #include "XCU_UDSonly_types.h"
 #include "evp_UDS.h"
-#include "rtw_modelmap.h"
+//#include "rtw_modelmap.h"
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetDataMapInfo
@@ -121,19 +121,19 @@ struct P_ {
                                         */
 };
 
-/* Real-time Model Data Structure */
-struct tag_RTM {
-  const char_T * volatile errorStatus;
-
-  /*
-   * DataMapInfo:
-   * The following substructure contains information regarding
-   * structures generated in the model's C API.
-   */
-  struct {
-    rtwCAPI_ModelMappingInfo mmi;
-  } DataMapInfo;
-};
+///* Real-time Model Data Structure */
+//struct tag_RTM {
+//  const char_T * volatile errorStatus;
+//
+//  /*
+//   * DataMapInfo:
+//   * The following substructure contains information regarding
+//   * structures generated in the model's C API.
+//   */
+//  struct {
+//    rtwCAPI_ModelMappingInfo mmi;
+//  } DataMapInfo;
+//};
 
 /* Block parameters (default storage) */
 extern P rtP;
@@ -150,11 +150,11 @@ extern void XCU_UDSonly_step(void);
 extern void XCU_UDSonly_terminate(void);
 
 /* Function to get C API Model Mapping Static Info */
-extern const rtwCAPI_ModelMappingStaticInfo*
-  XCU_UDSonly_GetCAPIStaticMap(void);
+//extern const rtwCAPI_ModelMappingStaticInfo*
+//  XCU_UDSonly_GetCAPIStaticMap(void);
 
 /* Real-time Model object */
-extern RT_MODEL *const rtM;
+//extern RT_MODEL *const rtM;
 
 /*-
  * The generated code includes comments that allow you to trace directly

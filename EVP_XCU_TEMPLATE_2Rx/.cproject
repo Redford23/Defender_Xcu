@@ -42,12 +42,7 @@
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/EVP_FEE}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/user_model_code}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/simulink_model_code}"/>
-									<listOptionValue builtIn="false" value="${MATLAB_PATH}\rtw\c\src\ext_mode\common"/>
-									<listOptionValue builtIn="false" value="${MATLAB_PATH}\extern\include"/>
-									<listOptionValue builtIn="false" value="${MATLAB_PATH}\rtw\c\src"/>
 									<listOptionValue builtIn="false" value="C:\ti\Hercules\F021 Flash API\02.01.01\include"/>
-									<listOptionValue builtIn="false" value="${MATLAB_PATH}\toolbox\shared\can\src\scanutil"/>
-									<listOptionValue builtIn="false" value="${MATLAB_PATH}\simulink\include"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/startup}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/include}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/FreeRTOS/portable/CCS/ARM_Cortex-R4}"/>

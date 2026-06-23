@@ -90,10 +90,6 @@
 	</linkedResources>
 	<variableList>
 		<variable>
-			<name>MATLAB_PATH</name>
-			<value>file:/C:/Program%20Files/MATLAB/R2023a</value>
-		</variable>
-		<variable>
 			<name>copy_PARENT</name>
 			<value>$%7BPARENT-3-PROJECT_LOC%7D</value>
 		</variable>

@@ -16,7 +16,7 @@
 #include "XCU_UDSonly.h"
 #include "rtwtypes.h"
 #include "XCU_UDSonly_private.h"
-#include "XCU_UDSonly_capi.h"
+//#include "XCU_UDSonly_capi.h"
 
 /* Named constants for Chart: '<S3>/DiagnosticCANProcess' */
 #define CALL_EVENT                     (-1)
@@ -46,8 +46,8 @@ B rtB;
 DW rtDW;
 
 /* Real-time model */
-static RT_MODEL rtM_;
-RT_MODEL *const rtM = &rtM_;
+//static RT_MODEL rtM_;
+//RT_MODEL *const rtM = &rtM_;
 
 /* Forward declaration for local functions */
 static void calculateKey(void);
@@ -448,7 +448,7 @@ void XCU_UDSonly_initialize(void)
   /* Registration code */
 
   /* Initialize DataMapInfo substructure containing ModelMap for C API */
-  XCU_UDSonly_InitializeDataMapInfo();
+//  XCU_UDSonly_InitializeDataMapInfo();
 
   /* SystemInitialize for Chart: '<S3>/DiagnosticCANProcess' */
   rtDW.sfEvent = CALL_EVENT;
