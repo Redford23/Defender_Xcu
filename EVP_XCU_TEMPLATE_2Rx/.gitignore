@@ -8,7 +8,6 @@
 /xdsdebug/
 
 
-evp_model_interface.c
-include/evp_model_interface.h
+
 simulink_model_code/*.h
 simulink_model_code/*.c
