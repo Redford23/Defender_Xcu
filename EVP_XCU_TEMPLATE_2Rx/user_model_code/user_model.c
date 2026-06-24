@@ -37,7 +37,8 @@ CAN_MESSAGE_BUS packAnInputsMSG (ANALOG_INPUT_BUS data){
     packedData.Length = 0x08U;
     packedData.Extended = 0x00U;
     packedData.Data[0] = data.anLvSupply[0]; // pack first sample of supply voltage for demo
-
+/* the rest of the data should set to 0x00 !!
+ * Data[1] etc from the previous function will present in the output of this one*/
 
     return packedData;
 }
