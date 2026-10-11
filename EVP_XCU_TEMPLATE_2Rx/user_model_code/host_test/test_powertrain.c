@@ -97,6 +97,65 @@ static void test_codec(void)
     CHECK(codec_decode_ld(ldf, 3U, &ld) == 0U);
 }
 
+/* ------------------------------------------------------------ mode source */
+
+static void test_mode_source(void)
+{
+    ModeSrc m;
+    PowertrainCal cal = g_cal;
+    DriveMode mode;
+    uint8_t d[8] = { 1U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
+    uint8_t v;
+    int i;
+
+    cal.mode_timeout_ms = 500U;
+    cal.mode_stuck_ms   = 1000U;
+
+    /* nothing received: Engine only */
+    mode_src_init(&m);
+    v = mode_src_step(&m, 0U, 0U, d, &cal, 20U, &mode);
+    CHECK(v == 0U && mode == MODE_ENGINE_ONLY);
+
+    /* valid frames with a moving counter */
+    for (i = 0; i < 10; i++) {
+        d[0] = 1U; d[1] = (uint8_t)i;
+        v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode);
+    }
+    CHECK(v == 1U && mode == MODE_EV);
+    d[0] = 2U; d[1] = 50U;
+    v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode);
+    CHECK(v == 1U && mode == MODE_HYBRID);
+
+    /* invalid mode value */
+    d[0] = 7U; d[1] = 51U;
+    v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode);
+    CHECK(v == 0U && mode == MODE_ENGINE_ONLY);
+
+    /* short frame */
+    d[0] = 1U; d[1] = 52U;
+    v = mode_src_step(&m, 1U, 1U, d, &cal, 20U, &mode);
+    CHECK(v == 0U && mode == MODE_ENGINE_ONLY);
+
+    /* recovers on the next good frame */
+    d[0] = 1U; d[1] = 53U;
+    v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode);
+    CHECK(v == 1U && mode == MODE_EV);
+
+    /* frames stop: valid until the timeout, then Engine only */
+    for (i = 0; i < 20; i++) { v = mode_src_step(&m, 0U, 8U, d, &cal, 20U, &mode); }
+    CHECK(v == 1U);                          /* 400 ms */
+    for (i = 0; i < 6; i++) { v = mode_src_step(&m, 0U, 8U, d, &cal, 20U, &mode); }
+    CHECK(v == 0U && mode == MODE_ENGINE_ONLY);
+
+    /* frames keep coming with a frozen counter */
+    mode_src_init(&m);
+    d[0] = 1U; d[1] = 9U;
+    for (i = 0; i < 30; i++) { v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode); }
+    CHECK(v == 1U);                          /* 600 ms */
+    for (i = 0; i < 30; i++) { v = mode_src_step(&m, 1U, 8U, d, &cal, 20U, &mode); }
+    CHECK(v == 0U && mode == MODE_ENGINE_ONLY);
+}
+
 /* ------------------------------------------------------------ torque maps */
 
 static void test_maps(void)
@@ -108,12 +167,6 @@ static void test_maps(void)
     CHECK(tq_interp(ev, 450U) == 13);       /* 12 + 3*50/100, truncated */
     CHECK(tq_interp(ev, 1000U) == 30);
     CHECK(tq_interp(ev, 5000U) == 30);      /* above range holds the last point */
-
-    CHECK(tq_mode_from_switch(1U, 0U, 0U) == MODE_EV);
-    CHECK(tq_mode_from_switch(0U, 1U, 0U) == MODE_HYBRID);
-    CHECK(tq_mode_from_switch(0U, 0U, 1U) == MODE_ENGINE_ONLY);
-    CHECK(tq_mode_from_switch(0U, 0U, 0U) == MODE_ENGINE_ONLY);  /* open wire */
-    CHECK(tq_mode_from_switch(1U, 1U, 0U) == MODE_ENGINE_ONLY);
 
     CHECK(maps_validate(g_throttleMaps, 100) == 1U);
     CHECK(maps_validate(g_throttleMaps, 20) == 0U);              /* EV reaches 30 Nm */
@@ -177,6 +230,9 @@ typedef struct {
     uint16_t   vdc_dv;
     uint8_t    send_ld;
     uint8_t    send_isg;
+    uint8_t    send_mode;
+    uint8_t    mode;            /* 0 Engine only, 1 EV, 2 Hybrid */
+    uint8_t    mode_counter;
     uint8_t    mirror_enable;   /* drive feedback follows last command */
     uint8_t    mirror_torque;
     uint8_t    igbt_fb;
@@ -206,7 +262,8 @@ static void rig_init(Rig *r, const PowertrainCal *cal)
     r->mirror_torque = 1U;
     r->send_ld = 1U;
     r->send_isg = 1U;
-    r->in.din_mode_ev = 1U;
+    r->send_mode = 1U;
+    r->mode = 1U;
     r->in.lv_dv = 130U;
     pt_init(&r->pt, &r->cal, g_throttleMaps, 20U);
 }
@@ -227,6 +284,14 @@ static void rig_step(Rig *r)
     r->in.ld_len = 8U;
     r->in.ld_data[0] = (uint8_t)(r->pedal_raw >> 8);
     r->in.ld_data[1] = (uint8_t)(r->pedal_raw & 0xFFU);
+
+    /* display mode request, CAN1 0x302 */
+    r->in.mode_new = r->send_mode;
+    r->in.mode_len = 8U;
+    memset(r->in.mode_data, 0, sizeof(r->in.mode_data));
+    r->in.mode_data[0] = r->mode;
+    r->mode_counter = (uint8_t)(r->mode_counter + 1U);
+    r->in.mode_data[1] = r->mode_counter;
 
     r->live = (uint8_t)((r->live + 1U) & 0x0FU);
     for (i = 0U; i < SF_COUNT; i++) {
@@ -294,8 +359,8 @@ static void test_scenarios(void)
     rig_run(&r, 40);
     CHECK(r.out.cmd.torque_nm == 15);
 
-    /* mode switch to hybrid with pedal applied does not change mode */
-    r.in.din_mode_ev = 0U; r.in.din_mode_hybrid = 1U;
+    /* mode request to hybrid with pedal applied does not change mode */
+    r.mode = 2U;
     rig_run(&r, 30);
     CHECK(r.out.mode == (uint8_t)MODE_EV);
     r.pedal_raw = 0U;
@@ -303,16 +368,21 @@ static void test_scenarios(void)
     CHECK(r.out.mode == (uint8_t)MODE_HYBRID);
     CHECK(r.out.cmd.torque_nm == 0);
 
-    /* open wire on the mode switch: engine only, zero torque */
-    r.in.din_mode_hybrid = 0U;
+    /* display stops sending the mode: Engine only, zero torque */
+    r.send_mode = 0U;
     rig_run(&r, 30);
     CHECK(r.out.mode == (uint8_t)MODE_ENGINE_ONLY);
     r.pedal_raw = 800U;
     rig_run(&r, 40);
     CHECK(r.out.cmd.torque_nm == 0);
+    CHECK(r.out.level == 0U);                /* diagnostic only, no derate */
+    r.send_mode = 1U;
+    r.mode = 7U;                             /* invalid value */
+    rig_run(&r, 5);
+    CHECK(r.out.mode == (uint8_t)MODE_ENGINE_ONLY);
 
     /* LD frames stop: torque to zero within the debounce, drive stays enabled */
-    r.in.din_mode_ev = 1U;
+    r.mode = 1U;
     r.pedal_raw = 0U;
     rig_run(&r, 40);
     r.pedal_raw = 512U;
@@ -404,6 +474,7 @@ static void test_scenarios(void)
 int main(void)
 {
     test_codec();
+    test_mode_source();
     test_maps();
     test_fault_manager();
     test_scenarios();

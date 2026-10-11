@@ -24,9 +24,12 @@ typedef struct {
     uint16_t igbt_grace_ms;        /* allowed after MCU_Enable changes */
     uint16_t precharge_timeout_ms; /* PRECHARGE to READY, then L3 */
     uint16_t cmd_tx_interval_ms;   /* 0 = single shot every step, else periodic */
+    uint16_t mode_timeout_ms;      /* no mode frame (CAN1 0x302) for this long = Engine only */
+    uint16_t mode_stuck_ms;        /* mode frame counter unchanged this long = Engine only */
 
     /* CAN */
     uint8_t  ld_rx_dlc;            /* DLC passed to the CAN3 receive box for 0x100 */
+    uint8_t  mode_rx_dlc;          /* DLC passed to the CAN1 receive box for 0x302 */
 
     /* torque and speed */
     int16_t  torque_max_nm;        /* REQUIRED. Largest positive torque the xCU will request */

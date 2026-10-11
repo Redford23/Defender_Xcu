@@ -41,7 +41,8 @@ const FaultDef g_faultDefs[F_COUNT] = {
     /* F_SY_REDUND   */ { 3U, LATCH_KL,       0U,     0U,    0U,   0U },
     /* F_SY_UDS      */ { 3U, LATCH_KL,       0U,     0U,    0U,   0U },
     /* F_SY_CAL      */ { 3U, LATCH_KL,       0U,     0U,    0U,   0U },
-    /* F_SY_STEP     */ { 3U, LATCH_KL,       0U,     0U,    0U,   0U }
+    /* F_SY_STEP     */ { 3U, LATCH_KL,       0U,     0U,    0U,   0U },
+    /* F_MD_SRC      */ { 0U, LATCH_NL,       0U,   500U,    0U,   0U }
 };
 
 static uint16_t sat_add16(uint16_t a, uint16_t b)

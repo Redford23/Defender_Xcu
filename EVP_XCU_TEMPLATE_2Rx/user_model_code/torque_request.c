@@ -51,22 +51,6 @@ int32_t tq_interp(const ThrottleMap *map, uint16_t pedal_permille)
     return (int32_t)map->torque_nm[MAP_POINTS - 1U];
 }
 
-DriveMode tq_mode_from_switch(uint8_t ev, uint8_t hybrid, uint8_t engine)
-{
-    uint8_t n = (uint8_t)((ev != 0U) + (hybrid != 0U) + (engine != 0U));
-
-    if (n != 1U) {
-        return MODE_ENGINE_ONLY;
-    }
-    if (ev != 0U) {
-        return MODE_EV;
-    }
-    if (hybrid != 0U) {
-        return MODE_HYBRID;
-    }
-    return MODE_ENGINE_ONLY;
-}
-
 static int32_t clamp32(int32_t v, int32_t lo, int32_t hi)
 {
     if (v < lo) {
@@ -92,8 +76,14 @@ void tq_step(TqState *t, const TqInputs *in, const PowertrainCal *cal,
     out->clamped_by_drive = 0U;
 
     /* ---- mode: only changes with the pedal released ---------------------- */
-    sw = tq_mode_from_switch(in->sw_ev, in->sw_hybrid, in->sw_engine);
-    if (sw == t->requested) {
+    sw = in->mode_req;
+    if (in->mode_valid == 0U) {
+        /* source missing, invalid or frozen: motor torque does not carry on
+         * under a mode nobody is requesting. Takes effect at once. */
+        t->mode      = MODE_ENGINE_ONLY;
+        t->requested = MODE_ENGINE_ONLY;
+        t->req_ms    = 0U;
+    } else if (sw == t->requested) {
         t->req_ms = sat_add16(t->req_ms, dt_ms);
     } else {
         t->requested = sw;

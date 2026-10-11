@@ -261,4 +261,7 @@ void mon_step(MonState *ms, const MonInputs *in, const PowertrainCal *cal,
     cond[F_SY_REDUND]= (in->redund_ok == 0U) ? 1U : 0U;
     cond[F_SY_CAL]   = (in->cal_ok == 0U) ? 1U : 0U;
     cond[F_SY_STEP]  = (in->step_ok == 0U) ? 1U : 0U;
+
+    /* MD-01: diagnostic only, the mode has already fallen to Engine only */
+    cond[F_MD_SRC]   = ((grace == 0U) && (in->mode_src_ok == 0U)) ? 1U : 0U;
 }

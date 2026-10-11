@@ -58,6 +58,7 @@ typedef struct {
     uint8_t      step_ok;
     uint8_t      state_ok;
     uint8_t      redund_ok;
+    uint8_t      mode_src_ok;
 } MonInputs;
 
 typedef struct {

@@ -70,6 +70,7 @@ void pt_init(Powertrain *p, const PowertrainCal *cal, const ThrottleMap *maps, u
     fm_init(&p->fm);
     sm_init(&p->sm);
     tq_init(&p->tq);
+    mode_src_init(&p->msrc);
 
     p->ld_have   = 0U;
     p->ld_len_ok = 1U;
@@ -117,8 +118,14 @@ void pt_step(Powertrain *p, const PtInputs *in, PtOutputs *out)
     uint8_t    vdc_ok = 0U;
     uint8_t    limits_valid = 0U;
     uint8_t    drive_seen;
+    uint8_t    mode_valid;
+    DriveMode  mode_req;
 
     decode_inputs(p, in);
+
+    /* ---- drive mode request ------------------------------------------------ */
+    mode_valid = mode_src_step(&p->msrc, in->mode_new, in->mode_len, in->mode_data,
+                               cal, dt, &mode_req);
 
     /* ---- pedal ------------------------------------------------------------- */
     pedal_valid = ((p->ld_have != 0U) && (p->ld_len_ok != 0U) &&
@@ -185,6 +192,7 @@ void pt_step(Powertrain *p, const PtInputs *in, PtOutputs *out)
     mi.step_ok        = p->step_ok;
     mi.state_ok       = sm_state_ok(&p->sm);
     mi.redund_ok      = fm_level_ok(&p->fm);
+    mi.mode_src_ok    = mode_valid;
     mon_step(&p->mon, &mi, cal, dt, cond);
 
     /* ---- fault manager ------------------------------------------------------- */
@@ -209,9 +217,8 @@ void pt_step(Powertrain *p, const PtInputs *in, PtOutputs *out)
     ti.pedal_released = p->pedal_released;
     ti.allow          = so.allow_torque;
     ti.level          = p->fm.level;
-    ti.sw_ev          = in->din_mode_ev;
-    ti.sw_hybrid      = in->din_mode_hybrid;
-    ti.sw_engine      = in->din_mode_engine;
+    ti.mode_valid     = mode_valid;
+    ti.mode_req       = mode_req;
     ti.limits_valid   = limits_valid;
     ti.drive_hi_nm    = (int16_t)p->s2.limit_high_nm;
     ti.drive_lo_nm    = (int16_t)p->s2.limit_low_nm;

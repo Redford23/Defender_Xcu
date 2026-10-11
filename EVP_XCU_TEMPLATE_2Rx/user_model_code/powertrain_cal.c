@@ -17,8 +17,11 @@ const PowertrainCal g_cal = {
     /* igbt_grace_ms */          1000U,
     /* precharge_timeout_ms */   30000U,
     /* cmd_tx_interval_ms */     0U,        /* single shot each step. Use the step period if bench shows one frame only */
+    /* mode_timeout_ms */        500U,      /* TBC against the display frame rate */
+    /* mode_stuck_ms */          1000U,
 
     /* ld_rx_dlc */              8U,        /* TBC: LD frame length is not documented */
+    /* mode_rx_dlc */            8U,        /* TBC: display frame length */
 
     /* torque_max_nm */          0,         /* REQUIRED: not set */
     /* regen_max_nm */           0,         /* negative torque disabled until set */
@@ -74,7 +77,8 @@ uint8_t cal_validate(const PowertrainCal *cal, uint8_t *reason)
         r = CAL_BAD_STEP;
     } else if ((cal->ld_timeout_ms == 0U) || (cal->drv_timeout_ms == 0U) ||
                (cal->live_stuck_ms == 0U) || (cal->precharge_timeout_ms == 0U) ||
-               (cal->pedal_frozen_ms == 0U)) {
+               (cal->pedal_frozen_ms == 0U) || (cal->mode_timeout_ms == 0U) ||
+               (cal->mode_stuck_ms == 0U)) {
         r = CAL_BAD_TIMING;
     } else if (cal->torque_max_nm <= 0) {
         r = CAL_TORQUE_UNSET;
@@ -103,7 +107,7 @@ uint8_t cal_validate(const PowertrainCal *cal, uint8_t *reason)
                (cal->gear_cmd > 2U) ||
                (cal->demand_limit_high_raw > DEMAND_LIMIT_RAW_MAX) ||
                (cal->demand_limit_low_raw > DEMAND_LIMIT_RAW_MAX) ||
-               (cal->ld_rx_dlc > 8U)) {
+               (cal->ld_rx_dlc > 8U) || (cal->mode_rx_dlc > 8U)) {
         r = CAL_FIELD;
     } else {
         r = CAL_OK;

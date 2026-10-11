@@ -6,7 +6,8 @@
  * touches an output.
  *
  * Levels (higher wins): 0 normal, 1 derate, 2 zero torque with drive
- * enabled, 3 drive disabled. Level 4 (engine stop) is not implemented,
+ * enabled, 3 drive disabled. A fault with base level 0 is diagnostic only.
+ * Level 4 (engine stop) is not implemented,
  * fuel shut-off wiring is not defined yet.
  *
  * Latch: NL clears itself, DL needs the condition gone plus a driver
@@ -53,13 +54,14 @@ typedef enum {
     F_SY_UDS,           /* UDS programming session active */
     F_SY_CAL,           /* calibration or maps failed start-up check */
     F_SY_STEP,          /* step period outside accepted range */
+    F_MD_SRC,           /* mode request missing, invalid or frozen. Level 0, mode falls to Engine only */
     F_COUNT
 } FaultId;
 
 typedef enum { LATCH_NL = 0, LATCH_DL = 1, LATCH_KL = 2 } LatchType;
 
 typedef struct {
-    uint8_t  level;            /* base level 1..3 */
+    uint8_t  level;            /* base level 0..3 */
     uint8_t  latch;
     uint16_t debounce_ms;      /* condition must hold this long */
     uint16_t clear_ms;         /* condition must be absent this long */

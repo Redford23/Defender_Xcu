@@ -366,6 +366,10 @@ CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data, unsigned char faultC
  * CAN3 receive boxes
  *   box 1  LD controller 0x100 (11-bit)
  *   box 2..5  iNetic ISG_MCU_STATUS1..4 (29-bit)
+ * CAN1 receive box
+ *   box 1  drive mode request 0x302 from the display (11-bit):
+ *          byte 0 = mode (0 Engine only, 1 EV, 2 Hybrid), byte 1 = rolling
+ *          counter. ID and layout chosen by Red, not yet in the DBC.
  * "New frame" is detected by a change in the box timestamp, so it does not
  * depend on the timestamp unit. TO CONFIRM WITH MARC: that Timestamp only
  * changes on reception, and that a receive box accepts 29-bit IDs with the
@@ -373,22 +377,20 @@ CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data, unsigned char faultC
  * (zero torque, drive not enabled).
  *
  * Digital inputs (PROPOSED, confirm against the loom)
- *   B3  DIN0  mode switch position EV
- *   B4  DIN1  mode switch position Hybrid
- *   B5  DIN2  mode switch position Engine only
  *   B11 DIN12 brake pedal switch, high = pressed (cal brake_active_high)
- * Exactly one mode input high selects a mode. None or several, which
- * includes a broken wire, selects Engine only (zero motor torque).
+ * A missing, invalid or frozen mode request selects Engine only (zero
+ * motor torque), see mode_source.c.
  */
 #define LD_RX_BOX            1.0
 #define ISG_RX_BOX_FIRST     2.0
+#define MODE_RX_BOX          1.0
 #define RX_MASK_STD          0x000007FFU
 #define RX_MASK_EXT          0x1FFFFFFFU
 #define ISG_RX_DLC           8U
 
 static Powertrain    g_pt;
 static unsigned char g_ptReady = 0U;
-static double        g_rxTimestamp[1U + SF_COUNT] = {0.0, 0.0, 0.0, 0.0, 0.0};
+static double        g_rxTimestamp[2U + SF_COUNT] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 static void copyFrame(CAN_MESSAGE_BUS msg, double *lastTs, unsigned char *isNew,
                       unsigned char *len, unsigned char data[8]){
@@ -419,10 +421,11 @@ static void gatherPowertrainInputs(PtInputs *in, DIGITAL_INPUT_BUS dig, ANALOG_I
         copyFrame(msg, &g_rxTimestamp[1U + i], &in->s_new[i], &in->s_len[i], in->s_data[i]);
     }
 
-    in->din_mode_ev     = (dig.digitalInput0  != 0U) ? 1U : 0U;
-    in->din_mode_hybrid = (dig.digitalInput1  != 0U) ? 1U : 0U;
-    in->din_mode_engine = (dig.digitalInput2  != 0U) ? 1U : 0U;
-    in->din_brake       = (dig.digitalInput12 != 0U) ? 1U : 0U;
+    /* drive mode request, CAN1 */
+    msg = dcan1MessageboxRead(MODE_RX_BOX, (double)ID_MODE_REQUEST, RX_MASK_STD, g_cal.mode_rx_dlc);
+    copyFrame(msg, &g_rxTimestamp[1U + SF_COUNT], &in->mode_new, &in->mode_len, in->mode_data);
+
+    in->din_brake = (dig.digitalInput12 != 0U) ? 1U : 0U;
 
     lvVolts = lvSupplyVolts(averageAdcSamples(ana.anLvSupply, ADC_SAMPLE_COUNT));
     if (lvVolts < 0.0f){

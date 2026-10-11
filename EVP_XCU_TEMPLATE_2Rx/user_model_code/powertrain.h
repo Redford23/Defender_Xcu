@@ -19,6 +19,7 @@
 #include "fault_mgr.h"
 #include "drive_sm.h"
 #include "torque_request.h"
+#include "mode_source.h"
 #include "safety_gate.h"
 
 typedef struct {
@@ -32,10 +33,12 @@ typedef struct {
     uint8_t  s_len[SF_COUNT];
     uint8_t  s_data[SF_COUNT][8];
 
+    /* mode request, CAN1 0x302 */
+    uint8_t  mode_new;
+    uint8_t  mode_len;
+    uint8_t  mode_data[8];
+
     /* digital inputs as read (1 = high) */
-    uint8_t  din_mode_ev;
-    uint8_t  din_mode_hybrid;
-    uint8_t  din_mode_engine;
     uint8_t  din_brake;
 
     uint16_t lv_dv;         /* LV supply, 0.1 V */
@@ -68,6 +71,7 @@ typedef struct {
     FaultMgr   fm;
     SmState    sm;
     TqState    tq;
+    ModeSrc    msrc;
 
     uint8_t    ld_have;
     uint8_t    ld_len_ok;

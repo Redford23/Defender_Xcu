@@ -25,9 +25,8 @@ typedef struct {
     uint8_t  pedal_released;
     uint8_t  allow;            /* state machine is in DRIVE */
     uint8_t  level;            /* safe-state level */
-    uint8_t  sw_ev;            /* mode switch inputs, exactly one should be high */
-    uint8_t  sw_hybrid;
-    uint8_t  sw_engine;
+    uint8_t   mode_valid;      /* mode request qualified by mode_source */
+    DriveMode mode_req;        /* requested mode, ENGINE_ONLY if not valid */
     uint8_t  limits_valid;     /* drive torque limits received and sane */
     int16_t  drive_hi_nm;      /* TorqueLimit_High */
     int16_t  drive_lo_nm;      /* TorqueLimit_Low, zero or negative */
@@ -43,10 +42,6 @@ void tq_init(TqState *t);
 
 /* Linear interpolation of one map. pedal above 1000 is treated as 1000. */
 int32_t tq_interp(const ThrottleMap *map, uint16_t pedal_permille);
-
-/* Switch decode. Exactly one input high selects a mode. Anything else
- * (none, or more than one, which includes an open wire) is ENGINE_ONLY. */
-DriveMode tq_mode_from_switch(uint8_t ev, uint8_t hybrid, uint8_t engine);
 
 void tq_step(TqState *t, const TqInputs *in, const PowertrainCal *cal,
              const ThrottleMap *maps, uint16_t dt_ms, TqOutputs *out);

@@ -28,8 +28,10 @@
  *     so EV mode cannot yet hold the engine at idle. The two maps differ in
  *     motor torque only.
  *
- * Mode is chosen by the switch inputs (see user_model.c). It only changes
- * while the pedal is released.
+ * Mode is requested by the display on CAN1, ID 0x302 (see mode_source.h):
+ * byte 0 = 0 Engine only, 1 EV, 2 Hybrid, byte 1 = rolling counter. A
+ * missing, invalid or frozen request means Engine only at once. A valid
+ * change only takes effect while the pedal is released.
  *
  * The shipped numbers are small bench values, not tuned values.
  */
