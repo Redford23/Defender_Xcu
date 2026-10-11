@@ -15,7 +15,8 @@
 typedef struct {
     DriveMode mode;        /* mode in use */
     DriveMode requested;   /* mode the switch is asking for */
-    uint16_t  req_ms;      /* how long the switch has asked for it */
+    uint16_t  req_ms;      /* how long the display has asked for it */
+    uint8_t   have_mode;   /* a valid request has been adopted since power-on */
     int16_t   out_nm;      /* torque after rate limiting */
 } TqState;
 

@@ -19,6 +19,7 @@ void tq_init(TqState *t)
     t->mode      = MODE_ENGINE_ONLY;
     t->requested = MODE_ENGINE_ONLY;
     t->req_ms    = 0U;
+    t->have_mode = 0U;
     t->out_nm    = 0;
 }
 
@@ -83,6 +84,13 @@ void tq_step(TqState *t, const TqInputs *in, const PowertrainCal *cal,
         t->mode      = MODE_ENGINE_ONLY;
         t->requested = MODE_ENGINE_ONLY;
         t->req_ms    = 0U;
+    } else if (t->have_mode == 0U) {
+        /* first valid request since power-on: take it at once. No torque can
+         * have been requested yet, DRIVE needs the pedal released. */
+        t->mode      = sw;
+        t->requested = sw;
+        t->req_ms    = 0U;
+        t->have_mode = 1U;
     } else if (sw == t->requested) {
         t->req_ms = sat_add16(t->req_ms, dt_ms);
     } else {

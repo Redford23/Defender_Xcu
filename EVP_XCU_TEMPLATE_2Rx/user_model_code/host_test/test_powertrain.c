@@ -346,6 +346,8 @@ static void test_scenarios(void)
     /* normal bring-up */
     rig_init(&r, 0);
     CHECK(r.pt.cal_ok == 1U);
+    rig_step(&r);
+    CHECK(r.out.mode == (uint8_t)MODE_EV);   /* first valid request is adopted at once */
     rig_to_drive(&r);
     CHECK(r.out.state == (uint8_t)SM_DRIVE);
     CHECK(r.out.cmd.enable == 1U && r.out.cmd.torque_nm == 0);

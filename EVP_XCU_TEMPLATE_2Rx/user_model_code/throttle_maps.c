@@ -30,8 +30,9 @@
  *
  * Mode is requested by the display on CAN1, ID 0x302 (see mode_source.h):
  * byte 0 = 0 Engine only, 1 EV, 2 Hybrid, byte 1 = rolling counter. A
- * missing, invalid or frozen request means Engine only at once. A valid
- * change only takes effect while the pedal is released.
+ * missing, invalid or frozen request means Engine only at once. The first
+ * valid request after power-on is taken immediately. Later changes only
+ * take effect while the pedal is released.
  *
  * The shipped numbers are small bench values, not tuned values.
  */
