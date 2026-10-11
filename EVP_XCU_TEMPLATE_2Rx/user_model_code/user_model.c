@@ -8,10 +8,10 @@
 #include "user_model.h"
 #include <math.h>
 
-/* user model constants */
-#define TEST_MESSAGE1_ID 0x123
-#define TEST_MESSAGE2_ID 0x124
-#define TEST_MESSAGE3_ID 0x125
+/* CAN2 is Marc's UDS bus. IDs 0x123 and 0x124 come from outside this
+ * application and must not be reused. The template example traffic on 0x123,
+ * 0x124 and 0x125 was removed (it sent uninitialised bytes and let a CAN2
+ * frame drive digital output 1). Do not add application traffic to CAN2. */
 
 /* --- ERR2081 coolant temperature sensor (Stage 1) -------------------------
  * Physical: pin C7 (AN INPUT 3) -> anInputExternal3, per
@@ -102,35 +102,6 @@
 
 
 /* user model functions */
-CAN_MESSAGE_BUS packDigitalInputsMSG(DIGITAL_INPUT_BUS data){
-    CAN_MESSAGE_BUS packedData;
-    packedData.ID = TEST_MESSAGE1_ID;
-    packedData.Length = 0x08U;
-    packedData.Extended = 0x00U;
-    packedData.Data[0] = data.digitalInput0;
-    packedData.Data[1] = data.digitalInput1;
-    packedData.Data[2] = data.digitalInput2;
-    packedData.Data[3] = data.digitalInput3;
-    packedData.Data[4] = data.digitalInput4;
-    packedData.Data[5] = data.digitalInput5;
-    packedData.Data[6] = data.digitalInput6;
-    packedData.Data[7] = data.digitalInput12;
-
-    return packedData;
-}
-
-CAN_MESSAGE_BUS packAnInputsMSG (ANALOG_INPUT_BUS data){
-    CAN_MESSAGE_BUS packedData;
-    packedData.ID = TEST_MESSAGE2_ID;
-    packedData.Length = 0x08U;
-    packedData.Extended = 0x00U;
-    packedData.Data[0] = data.anLvSupply[0]; // pack first sample of supply voltage for demo
-/* the rest of the data should set to 0x00 !!
- * Data[1] etc from the previous function will present in the output of this one*/
-
-    return packedData;
-}
-
 /* average the ADC_SAMPLE_COUNT raw samples for one analog channel to reduce noise */
 static unsigned int averageAdcSamples(const unsigned int *samples, unsigned int count){
     unsigned int i;
@@ -390,7 +361,7 @@ CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data){
 
 /* code required to initialise model here */
 extern void user_model_initialize(void){
-    DIGITAL_OUTPUT_BUS digitalOutputsInit;
+    DIGITAL_OUTPUT_BUS digitalOutputsInit = {0}; /* every output starts off, nothing is left indeterminate */
  // clear global data
  //set any states and parameters to required values
   //e.g: userModelState = INITIALISED;
@@ -406,30 +377,19 @@ extern void user_model_initialize(void){
 /* this will be run at the specified time interval from the model step task  */
 extern void user_model_step(void){
     //model step function variables
-    DIGITAL_INPUT_BUS  digitalInputs;
-    DIGITAL_OUTPUT_BUS digitalOutputs;
+    DIGITAL_OUTPUT_BUS digitalOutputs = {0}; /* every output starts off each cycle */
     ANALOG_INPUT_BUS analogInputs;
-    CAN_MESSAGE_BUS exampleCanRx;
-    CAN_MESSAGE_BUS exampleCanTx;
-    CAN_MESSAGE_BUS exampleCanTx2;
     CAN_MESSAGE_BUS engineTemps1Tx;
     CAN_MESSAGE_BUS fuelStatusTx;
     CAN_MESSAGE_BUS nodeHeartbeatTx;
 
 
     //read inputs
-    digitalInputs = digitalInputRead ();
     analogInputs =  analogInputRead();
-    //receive can data
-    exampleCanRx = dcan2MessageboxRead ((double) 1, (double)TEST_MESSAGE3_ID , 0x000007ff, 0x08);
 
 
     //call model functions
 /* @Red the control functions go here */
-    digitalOutputs.digitalOutput1 = exampleCanRx.Data[0];
-
-    exampleCanTx = packDigitalInputsMSG(digitalInputs);
-    exampleCanTx2 = packAnInputsMSG(analogInputs);
     engineTemps1Tx = packEngineTemps1MSG(analogInputs);
     fuelStatusTx = packFuelStatusMSG(analogInputs);
     nodeHeartbeatTx = packNodeHeartbeatMSG(analogInputs);
@@ -443,10 +403,7 @@ extern void user_model_step(void){
     digitalOutputSet (digitalOutputs,1000U,100U,100U,40U,156U); // constants to turn pwm function off
 
     //transmit can data @Red add messages here as required
-    //CAN 2 message box 1 is assigned to UDS bootloader
-    dcan2Messagebox1Transmit(exampleCanTx, 1U, (double)100,(double)2);
-    dcan2Messagebox1Transmit(exampleCanTx2, 1U, (double)100,(double)3);
-
+    //CAN 2 is the UDS bootloader bus - no application traffic
     //CAN 1 = confirmed Stage 1 sensor-logging bus (Defender_VCU_xCU_Mapping_updated.xlsx).
     //Engine_Temps1 (0x110) - coolant temperature (ERR2081), buffer 1, 500ms interval
     dcan1Messagebox1Transmit(engineTemps1Tx, 1U, (double)500,(double)1);
