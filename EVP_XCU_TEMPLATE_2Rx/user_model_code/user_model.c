@@ -7,6 +7,8 @@
 
 #include "user_model.h"
 #include <math.h>
+#include "XCU_UDSonly.h"   /* rtB.inhibitDrive from the template UDS model */
+#include "powertrain.h"
 
 /* CAN2 is Marc's UDS bus. IDs 0x123 and 0x124 come from outside this
  * application and must not be reused. The template example traffic on 0x123,
@@ -97,8 +99,8 @@
 #define HEARTBEAT_NODE_ID          0U       /* placeholder - represents this xCU's ENG_NODE role */
 #define HEARTBEAT_SW_MAJOR         0U       /* placeholder firmware version - bump when you adopt real versioning */
 #define HEARTBEAT_SW_MINOR         1U
-#define HEARTBEAT_FAULT_COUNT      0U       /* placeholder - no fault-tracking system implemented yet */
-#define HEARTBEAT_LAST_FAULT_CODE  0U
+/* FaultCount and LastFaultCode come from the powertrain fault manager (fault_mgr.h).
+ * LastFaultCode is FaultId + 1, 0 = none. */
 
 
 /* user model functions */
@@ -326,7 +328,7 @@ static unsigned char heartbeatRollingCounter(void){
 /* pack CAN1 "Node_Heartbeat" (ID 0x3F0) frame per Defender_DBC_v1.txt.
  * Broadcasts this xCU's identity/version, live LV supply rail voltage
  * (shared helper with the fuel sender correction), and a rolling counter. */
-CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data){
+CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data, unsigned char faultCount, unsigned char lastFaultCode){
     CAN_MESSAGE_BUS packedData;
     unsigned int  lvSupplyAdcAvg;
     float         supplyV;
@@ -349,60 +351,131 @@ CAN_MESSAGE_BUS packNodeHeartbeatMSG(ANALOG_INPUT_BUS data){
     packedData.Data[1] = (unsigned char)HEARTBEAT_SW_MAJOR;
     packedData.Data[2] = (unsigned char)HEARTBEAT_SW_MINOR;
     packedData.Data[3] = heartbeatUptimeLowByte();
-    packedData.Data[4] = (unsigned char)HEARTBEAT_FAULT_COUNT;
-    packedData.Data[5] = (unsigned char)HEARTBEAT_LAST_FAULT_CODE;
+    packedData.Data[4] = faultCount;
+    packedData.Data[5] = lastFaultCode;
     packedData.Data[6] = supplyByte;
     packedData.Data[7] = heartbeatRollingCounter();
 
     return packedData;
 }
 
+/* --- Powertrain supervisor (Stage 3) ---------------------------------------
+ * Receive and decode happens in powertrain.c, this section only gathers the
+ * raw frames and switch states.
+ *
+ * CAN3 receive boxes
+ *   box 1  LD controller 0x100 (11-bit)
+ *   box 2..5  iNetic ISG_MCU_STATUS1..4 (29-bit)
+ * "New frame" is detected by a change in the box timestamp, so it does not
+ * depend on the timestamp unit. TO CONFIRM WITH MARC: that Timestamp only
+ * changes on reception, and that a receive box accepts 29-bit IDs with the
+ * mask used below. If either is wrong every frame times out, which is safe
+ * (zero torque, drive not enabled).
+ *
+ * Digital inputs (PROPOSED, confirm against the loom)
+ *   B3  DIN0  mode switch position EV
+ *   B4  DIN1  mode switch position Hybrid
+ *   B5  DIN2  mode switch position Engine only
+ *   B11 DIN12 brake pedal switch, high = pressed (cal brake_active_high)
+ * Exactly one mode input high selects a mode. None or several, which
+ * includes a broken wire, selects Engine only (zero motor torque).
+ */
+#define LD_RX_BOX            1.0
+#define ISG_RX_BOX_FIRST     2.0
+#define RX_MASK_STD          0x000007FFU
+#define RX_MASK_EXT          0x1FFFFFFFU
+#define ISG_RX_DLC           8U
+
+static Powertrain    g_pt;
+static unsigned char g_ptReady = 0U;
+static double        g_rxTimestamp[1U + SF_COUNT] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+static void copyFrame(CAN_MESSAGE_BUS msg, double *lastTs, unsigned char *isNew,
+                      unsigned char *len, unsigned char data[8]){
+    unsigned char j;
+
+    *isNew  = (msg.Timestamp != *lastTs) ? 1U : 0U;
+    *lastTs = msg.Timestamp;
+    *len    = msg.Length;
+    for (j = 0U; j < 8U; j++){
+        data[j] = msg.Data[j];
+    }
+}
+
+static void gatherPowertrainInputs(PtInputs *in, DIGITAL_INPUT_BUS dig, ANALOG_INPUT_BUS ana){
+    static const unsigned int isgId[SF_COUNT] = {
+        (unsigned int)ID_ISG_MCU_STATUS1, (unsigned int)ID_ISG_MCU_STATUS2,
+        (unsigned int)ID_ISG_MCU_STATUS3, (unsigned int)ID_ISG_MCU_STATUS4
+    };
+    CAN_MESSAGE_BUS msg;
+    unsigned char   i;
+    float           lvVolts;
+
+    msg = dcan3MessageboxRead(LD_RX_BOX, (double)ID_LD_STATUS, RX_MASK_STD, g_cal.ld_rx_dlc);
+    copyFrame(msg, &g_rxTimestamp[0], &in->ld_new, &in->ld_len, in->ld_data);
+
+    for (i = 0U; i < SF_COUNT; i++){
+        msg = dcan3MessageboxRead(ISG_RX_BOX_FIRST + (double)i, (double)isgId[i], RX_MASK_EXT, ISG_RX_DLC);
+        copyFrame(msg, &g_rxTimestamp[1U + i], &in->s_new[i], &in->s_len[i], in->s_data[i]);
+    }
+
+    in->din_mode_ev     = (dig.digitalInput0  != 0U) ? 1U : 0U;
+    in->din_mode_hybrid = (dig.digitalInput1  != 0U) ? 1U : 0U;
+    in->din_mode_engine = (dig.digitalInput2  != 0U) ? 1U : 0U;
+    in->din_brake       = (dig.digitalInput12 != 0U) ? 1U : 0U;
+
+    lvVolts = lvSupplyVolts(averageAdcSamples(ana.anLvSupply, ADC_SAMPLE_COUNT));
+    if (lvVolts < 0.0f){
+        lvVolts = 0.0f;
+    }
+    if (lvVolts > 6000.0f){
+        lvVolts = 6000.0f;
+    }
+    in->lv_dv = (unsigned short)((lvVolts * 10.0f) + 0.5f);
+
+    in->uds_inhibit = (rtB.inhibitDrive != 0.0) ? 1U : 0U;
+}
+
 /* Model entry point functions */
 
 /* code required to initialise model here */
 extern void user_model_initialize(void){
-    DIGITAL_OUTPUT_BUS digitalOutputsInit = {0}; /* every output starts off, nothing is left indeterminate */
- // clear global data
- //set any states and parameters to required values
-  //e.g: userModelState = INITIALISED;
-    //set outputs
-    digitalOutputsInit.canStandby1 = 0; /* CAN1 now carries Stage 1 sensor data - take it out of standby */
-    digitalOutputsInit.canStandby2 = 0;
-    digitalOutputsInit.canStandby3 = 1; /* CAN3 (Stage 3 powertrain bus) still unused - leave in standby */
-
-    digitalOutputSet (digitalOutputsInit,1000U,100U,100U,40U,156U); // constants to turn pwm function off
-
+    /* every digital output off, CAN transceivers out of standby (see safety_gate.c).
+     * The supervisor itself is initialised on the first step, once the step
+     * period (simulinkModelStepTime_uS) is known. */
+    gate_init_outputs();
 }
 
 /* this will be run at the specified time interval from the model step task  */
 extern void user_model_step(void){
     //model step function variables
-    DIGITAL_OUTPUT_BUS digitalOutputs = {0}; /* every output starts off each cycle */
+    DIGITAL_INPUT_BUS digitalInputs;
     ANALOG_INPUT_BUS analogInputs;
     CAN_MESSAGE_BUS engineTemps1Tx;
     CAN_MESSAGE_BUS fuelStatusTx;
     CAN_MESSAGE_BUS nodeHeartbeatTx;
-
+    PtInputs ptIn;
+    PtOutputs ptOut;
 
     //read inputs
-    analogInputs =  analogInputRead();
+    digitalInputs = digitalInputRead();
+    analogInputs  = analogInputRead();
 
+    //powertrain supervisor: decode, monitor, fault manager, state machine,
+    //torque request. Final command and digital outputs come from the safety gate only.
+    if (g_ptReady == 0U){
+        pt_init(&g_pt, &g_cal, g_throttleMaps, (unsigned short)(simulinkModelStepTime_uS / 1000U));
+        g_ptReady = 1U;
+    }
+    gatherPowertrainInputs(&ptIn, digitalInputs, analogInputs);
+    pt_step(&g_pt, &ptIn, &ptOut);
+    gate_commit(&ptOut.cmd, &g_cal);
 
-    //call model functions
-/* @Red the control functions go here */
-    engineTemps1Tx = packEngineTemps1MSG(analogInputs);
-    fuelStatusTx = packFuelStatusMSG(analogInputs);
-    nodeHeartbeatTx = packNodeHeartbeatMSG(analogInputs);
+    //Stage 1 sensor frames
+    engineTemps1Tx  = packEngineTemps1MSG(analogInputs);
+    fuelStatusTx    = packFuelStatusMSG(analogInputs);
+    nodeHeartbeatTx = packNodeHeartbeatMSG(analogInputs, ptOut.fault_count, ptOut.last_fault);
 
-/* end of user funstions */
-
-    //set outputs - ensure state of can standby
-    digitalOutputs.canStandby1 = 0; /* CAN1 now carries Stage 1 sensor data - take it out of standby */
-    digitalOutputs.canStandby2 = 0;
-    digitalOutputs.canStandby3 = 1; /* CAN3 (Stage 3 powertrain bus) still unused - leave in standby */
-    digitalOutputSet (digitalOutputs,1000U,100U,100U,40U,156U); // constants to turn pwm function off
-
-    //transmit can data @Red add messages here as required
     //CAN 2 is the UDS bootloader bus - no application traffic
     //CAN 1 = confirmed Stage 1 sensor-logging bus (Defender_VCU_xCU_Mapping_updated.xlsx).
     //Engine_Temps1 (0x110) - coolant temperature (ERR2081), buffer 1, 500ms interval
