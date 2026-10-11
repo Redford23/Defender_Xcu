@@ -23,15 +23,18 @@ const PowertrainCal g_cal = {
     /* ld_rx_dlc */              8U,        /* TBC: LD frame length is not documented */
     /* mode_rx_dlc */            8U,        /* TBC: display frame length */
 
-    /* torque_max_nm */          0,         /* REQUIRED: not set */
+    /* torque_max_nm */          200,       /* Red: 200 Nm */
     /* regen_max_nm */           0,         /* negative torque disabled until set */
-    /* speed_max_rpm */          0U,        /* REQUIRED: not set */
+    /* speed_max_rpm */          12000U,    /* Red: 12000 rpm */
     /* l1_derate_percent */      50U,
 
-    /* vdc_hard_lo_dv */         0U,        /* REQUIRED: not set */
-    /* vdc_soft_lo_dv */         0U,        /* REQUIRED: not set */
-    /* vdc_soft_hi_dv */         0U,        /* REQUIRED: not set */
-    /* vdc_hard_hi_dv */         0U,        /* REQUIRED: not set */
+    /* DC link, 0.1 V units. Fixed window around a 320 V nominal for now (Red).
+     * To be replaced by a received value later. Hard limits are Red's 270 V
+     * and 385 V, soft limits are proposals 15 V inside them. */
+    /* vdc_hard_lo_dv */         2700U,     /* 270 V, L3 below */
+    /* vdc_soft_lo_dv */         2850U,     /* 285 V (P), L2 below */
+    /* vdc_soft_hi_dv */         3700U,     /* 370 V (P), L2 above */
+    /* vdc_hard_hi_dv */         3850U,     /* 385 V, L3 above */
 
     /* pedal_rel_lo_permille */  30U,
     /* pedal_rel_hi_permille */  50U,
