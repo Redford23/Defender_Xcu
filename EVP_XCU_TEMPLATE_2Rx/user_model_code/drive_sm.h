@@ -11,18 +11,8 @@
  *   PRECHARGE   0            0
  *   READY       1            0
  *   DRIVE       1            requested, through the safety gate
- *   FAULT       0 or kept    0   (level 2. MCU_Enable is dropped when cal
- *                                l2_drops_enable is 1, else it is kept as it was)
+ *   FAULT       unchanged    0   (level 2, drive stays enabled if it was)
  *   SHUTDOWN    0            0   (level 3, key cycle to leave)
- *
- * Dropping MCU_Enable at level 2 means the drive is no longer holding zero
- * torque, it is simply off. On a permanent magnet machine that turns at
- * speed, the back-EMF is then rectified into the DC link. Confirm with
- * iNetic that this is acceptable up to the maximum speed and voltage, or
- * set l2_drops_enable to 0.
- *
- * After a level 2 fault clears the state machine goes STANDBY, PRECHARGE,
- * READY, DRIVE again, because the drive was disabled.
  */
 
 #ifndef DRIVE_SM_H_
@@ -57,7 +47,6 @@ typedef struct {
     uint8_t  brake_pressed;
     uint8_t  vdc_ok;         /* DC voltage inside the soft window */
     uint8_t  igbt_fb;
-    uint8_t  l2_drops_enable;
     uint16_t dt_ms;
 } SmInputs;
 

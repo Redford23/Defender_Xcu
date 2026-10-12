@@ -27,7 +27,6 @@ const PowertrainCal g_cal = {
     /* regen_max_nm */           0,         /* negative torque disabled until set */
     /* speed_max_rpm */          12000U,    /* Red: 12000 rpm */
     /* l1_derate_percent */      50U,
-    /* l2_drops_enable */        1U,        /* Red: use MCU_Enable rather than 0 Nm. TBC with iNetic, see back-EMF note in drive_sm.h */
 
     /* DC link, 0.1 V units. Fixed window around a 320 V nominal for now (Red).
      * To be replaced by a received value later. Hard limits are Red's 270 V
@@ -108,7 +107,7 @@ uint8_t cal_validate(const PowertrainCal *cal, uint8_t *reason)
     } else if ((cal->lv_min_dv == 0U) || (cal->lv_min_dv >= cal->lv_max_dv)) {
         r = CAL_LV;
     } else if ((cal->l1_derate_percent == 0U) || (cal->l1_derate_percent > 100U) ||
-               (cal->gear_cmd > 2U) || (cal->l2_drops_enable > 1U) ||
+               (cal->gear_cmd > 2U) ||
                (cal->demand_limit_high_raw > DEMAND_LIMIT_RAW_MAX) ||
                (cal->demand_limit_low_raw > DEMAND_LIMIT_RAW_MAX) ||
                (cal->ld_rx_dlc > 8U) || (cal->mode_rx_dlc > 8U)) {

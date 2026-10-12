@@ -333,7 +333,6 @@ static void rig_to_drive(Rig *r)
 static void test_scenarios(void)
 {
     Rig r;
-    PowertrainCal c2;
     int i;
 
     /* shipped calibration is incomplete: must never enable the drive */
@@ -395,7 +394,7 @@ static void test_scenarios(void)
     rig_run(&r, 6);                          /* 120 ms with no frame */
     CHECK(r.out.level >= 2U);
     CHECK(r.out.cmd.torque_nm == 0);
-    CHECK(r.out.cmd.enable == 0U);           /* L2 drops MCU_Enable (cal default) */
+    CHECK(r.out.cmd.enable == 1U);           /* L2 keeps the drive enabled */
     CHECK(r.out.state == (uint8_t)SM_FAULT);
 
     /* frames return: still latched until the driver acts */
@@ -409,9 +408,8 @@ static void test_scenarios(void)
     r.in.din_brake = 1U;                     /* fresh press */
     rig_run(&r, 5);
     CHECK(r.out.level == 0U);
-    rig_run(&r, 60);                         /* drive was disabled: full sequence again */
+    rig_run(&r, 10);
     CHECK(r.out.state == (uint8_t)SM_DRIVE);
-    CHECK(r.out.cmd.enable == 1U);
 
     /* FailGrade 3: disabled, zero torque, and it stays that way */
     r.fail_grade = 3U;
@@ -462,16 +460,6 @@ static void test_scenarios(void)
     r.vdc_dv = 2000U;
     rig_run(&r, 10);
     CHECK(r.out.level == 3U);
-
-    /* calibration keeps the drive enabled at level 2 */
-    rig_cal(&c2);
-    c2.l2_drops_enable = 0U;
-    rig_init(&r, &c2);
-    rig_to_drive(&r);
-    r.send_ld = 0U;
-    rig_run(&r, 8);
-    CHECK(r.out.level == 2U);
-    CHECK(r.out.cmd.enable == 1U && r.out.cmd.torque_nm == 0);
 
     /* never a non-zero torque outside DRIVE */
     rig_init(&r, 0);

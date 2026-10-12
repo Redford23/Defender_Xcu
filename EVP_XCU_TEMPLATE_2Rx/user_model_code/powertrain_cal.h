@@ -36,7 +36,6 @@ typedef struct {
     int16_t  regen_max_nm;         /* Largest negative torque. 0 = negative torque disabled */
     uint16_t speed_max_rpm;        /* REQUIRED */
     uint8_t  l1_derate_percent;    /* L1 limits as a percentage of normal */
-    uint8_t  l2_drops_enable;      /* 1 = level 2 drops MCU_Enable, 0 = keeps it high with 0 Nm */
 
     /* DC link, units of 0.1 V. REQUIRED, all four, in ascending order */
     uint16_t vdc_hard_lo_dv;

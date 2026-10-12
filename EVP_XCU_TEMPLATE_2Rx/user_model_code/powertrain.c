@@ -208,7 +208,6 @@ void pt_step(Powertrain *p, const PtInputs *in, PtOutputs *out)
     si.brake_pressed  = brake;
     si.vdc_ok         = vdc_ok;
     si.igbt_fb        = ((p->s_have[SF_S1] != 0U) && (p->s1.igbt_fb != 0U)) ? 1U : 0U;
-    si.l2_drops_enable= cal->l2_drops_enable;
     si.dt_ms          = dt;
     sm_step(&p->sm, &si, &so);
 
