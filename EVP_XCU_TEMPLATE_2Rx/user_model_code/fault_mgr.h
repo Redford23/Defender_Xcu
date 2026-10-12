@@ -5,8 +5,9 @@
  * debounce, latching, escalation and the safe-state level. Nothing here
  * touches an output.
  *
- * Levels (higher wins): 0 normal, 1 derate, 2 zero torque with drive
- * enabled, 3 drive disabled. A fault with base level 0 is diagnostic only.
+ * Levels (higher wins): 0 normal, 1 derate, 2 zero torque (MCU_Enable
+ * dropped, or kept high at 0 Nm if cal l2_drops_enable is 0), 3 drive
+ * disabled and latched until power-on. A fault with base level 0 is diagnostic only.
  * Level 4 (engine stop) is not implemented,
  * fuel shut-off wiring is not defined yet.
  *

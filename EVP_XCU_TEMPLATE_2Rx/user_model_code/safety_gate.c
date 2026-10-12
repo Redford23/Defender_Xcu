@@ -34,8 +34,12 @@ void gate_compute(const GateRequest *req, const PowertrainCal *cal, DriveCommand
     cmd->limit_high_raw = cal->demand_limit_high_raw;
     cmd->limit_low_raw  = cal->demand_limit_low_raw;
 
-    /* level 2: enabled, zero torque (drive stays enabled, diesel unaffected) */
+    /* level 2: zero torque. MCU_Enable is dropped unless the calibration keeps
+     * the drive enabled (l2_drops_enable = 0). The diesel is unaffected. */
     if (req->level >= 2U) {
+        if (cal->l2_drops_enable != 0U) {
+            codec_safe_command(cmd);
+        }
         return;
     }
 

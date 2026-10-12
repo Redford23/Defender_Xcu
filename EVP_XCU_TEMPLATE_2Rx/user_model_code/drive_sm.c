@@ -122,7 +122,10 @@ void sm_step(SmState *s, const SmInputs *in, SmOutputs *out)
         s->enable = 1U;
         break;
     case SM_FAULT:
-        break;                /* unchanged: level 2 keeps the drive enabled */
+        if (in->l2_drops_enable != 0U) {
+            s->enable = 0U;  /* level 2: MCU_Enable dropped. Else unchanged */
+        }
+        break;
     default:
         s->enable = 0U;
         break;
